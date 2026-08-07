@@ -57,7 +57,7 @@ class PazGCodeGenerator:
                 first_y = passes_y[0]
                 lines.append(f"G0Z50.000")
                 lines.append(f"G0X0.000Y{first_y:.3f}")
-                lines.append("G0Z0.000")
+                lines.append("G0Z3.000")
                 lines.append(f"G1Z{z_current:.3f}F{f_z}")
                 
                 is_forward = True

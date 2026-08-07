@@ -93,6 +93,24 @@ class MainWindow(QMainWindow):
             target_layout = self.layouts_map[module_id]
             target_layout.addWidget(sidebar_widget)
             target_layout.addWidget(canvas_widget)
+
+        elif module_id == "cad_editor":
+            from modules.cad_editor.controller import CadEditorController
+            
+            # Инициализируем контроллер редактора векторов
+            controller = CadEditorController()
+            self.loaded_controllers[module_id] = controller
+            
+            # Забираем триаду виджетов (Тулбар, Холст, Статусбар)
+            toolbar_widget, canvas_widget, statusbar_widget = controller.get_widgets()
+            
+            # Получаем слой компоновки (для cad_editor он автоматически создался вертикальным)
+            target_layout = self.layouts_map[module_id]
+            
+            # Монтируем послойно: тулбар сверху, холст в центре (stretch=1), статусбар внизу
+            target_layout.addWidget(toolbar_widget)
+            target_layout.addWidget(canvas_widget, stretch=1)
+            target_layout.addWidget(statusbar_widget)
             
         # --- Сюда по аналогии мы добавим блоки для tracking_disks, cad_editor и gcode_viewer ---
         else:

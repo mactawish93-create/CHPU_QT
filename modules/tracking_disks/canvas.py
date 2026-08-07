@@ -34,19 +34,97 @@ class DisksCanvas(QGraphicsView):
 
     def draw_disks_layout(self, geo: dict):
         """
-        Принимает пакет чистой геометрии от модели и рендерит 
-        структурный чертеж диска с шахматными размерами ламелей.
+        Рендерит структуру диска с поддержкой горизонтального разворота досок для Бабочки.
         """
         self.scene.clear()
         
+        # Восстанавливаем и объявляем все необходимые переменные
         radius = geo.get("radius", 0.0)
         diameter = geo.get("diameter", 2000.0)
         lamels = geo.get("lamels", [])
         main_mode_idx = geo.get("main_mode_idx", 0)
-        shape_instance = geo.get("shape_instance") # Получаем объект активной формы бани
-        
-        if radius <= 0 or not shape_instance:
+        shape_instance = geo.get("shape_instance")
+
+        if not shape_instance:
             return
+
+        # =========================================================================
+        # 🪵 ШАГ 1: ОТРИСОВКА ДОСОК-ЛАМЕЛЕЙ ПО 135 ММ
+        # =========================================================================
+        if lamels:
+            wood_brush = QBrush(QColor("#25252B")) # Матовая темная текстура доски
+            wood_pen = QPen(QColor("#353540"), 1)   # Тонкий шов стыка ламелей
+            
+            for lamel in lamels:
+                if main_mode_idx == 2:
+                    # 🔥 ЖЕЛЕЗОБЕТОННЫЙ ФИКС ДЛЯ БАБОЧКИ:
+                    # 1. Смещаем по горизонтали влево на половину длины доски, чтобы отцентрировать купол относительно нуля X=0.
+                    # 2. По вертикали берем чистый lamel["x_start"] (он растет вверх от пола 0.0).
+                    # 3. Задаем длину доски (diameter).
+                    # 4. Высоту плашки (135 мм) передаем как lamel["x_end"] - lamel["x_start"].
+                    h_thick = lamel["x_end"] - lamel["x_start"]
+                    rect = QRectF(-lamel["length"] / 2.0, lamel["x_start"], lamel["length"], h_thick)
+                else:
+                    # Стандартный вертикальный режим для Круга (0) и Квадро (1)
+                    x1 = lamel["x_start"]
+                    x2 = lamel["x_end"]
+                    length = lamel["length"]
+                    half_len = length / 2.0
+                    rect = QRectF(x1, -half_len, x2 - x1, length)
+                    
+                self.scene.addRect(rect, wood_pen, wood_brush)
+
+        # =========================================================================
+        # 🎯 ШАГ 2: ДЕЛЕГИРОВАНИЕ ОТРИСОВКИ КОНТУРА В СУБМОДУЛЬ ФОРМЫ (SHAPES)
+        # =========================================================================
+        # Для Бабочки контур синий, для остальных — оригинальный янтарный
+        contour_color = QColor("#0055ff") if main_mode_idx == 2 else QColor("#FF9F43")
+        contour_pen = QPen(contour_color, 2, Qt.PenStyle.SolidLine)
+        shape_instance.draw_contour(self.scene, contour_pen)
+
+        # =========================================================================
+        # 👁 ШАГ 2.5: ОТОБРАЖЕНИЕ ТЕКУЩЕГО ДИАМЕТРА ПО ЦЕНТРУ ЧЕРТЕЖА (Только Круг и Квадро)
+        # =========================================================================
+        if main_mode_idx in [0, 1] and lamels:
+            center_label = f"Ø {diameter:.0f} мм" if main_mode_idx == 0 else f"КВАДРО {diameter:.0f} мм"
+            center_text = QGraphicsTextItem(center_label)
+            font_center = QFont("Segoe UI", 32, QFont.Weight.Bold)
+            center_text.setFont(font_center)
+            center_text.setDefaultTextColor(QColor(255, 159, 67, 45))
+            
+            t_center = QTransform()
+            t_center.scale(1, -1)
+            center_text.setTransform(t_center)
+            self.scene.addItem(center_text)
+            
+            cx = -center_text.boundingRect().width() / 2.0
+            cy = center_text.boundingRect().height() / 2.0
+            center_text.setPos(cx, cy)
+
+        # =========================================================================
+        # 🚪 ШАГ 3: ВИЗУАЛИЗАЦИЯ ДВЕРНОГО ПРОЕМА И ЧЕТВЕРТИ (Только Круг и Квадро)
+        # =========================================================================
+        if main_mode_idx in [0, 1] and geo.get("has_door"):
+            outer_pts = geo.get("door_outer", [])
+            inner_pts = geo.get("door_inner", [])
+            outer_pen = QPen(QColor("#FF4500"), 1.5, Qt.PenStyle.DashLine)
+            outer_poly = QPolygonF([QPointF(x, y) for x, y in outer_pts])
+            self.scene.addPolygon(outer_poly, outer_pen, QBrush(Qt.BrushStyle.NoBrush))
+            
+            inner_pen = QPen(QColor("#00FFFF"), 1.0, Qt.PenStyle.DotLine)
+            inner_poly = QPolygonF([QPointF(x, y) for x, y in inner_pts])
+            self.scene.addPolygon(inner_poly, inner_pen, QBrush(Qt.BrushStyle.NoBrush))
+
+        # =========================================================================
+        # 📐 ШАГ 4: ФОКУСИРОВКА И РАЗМЕРНЫЕ СЕТКИ
+        # =========================================================================
+        # 🔥 ИСПРАВЛЕНО: строим шахматную сетку ТОЛЬКО для Круга (0) и Квадро (1)
+        if main_mode_idx in [0, 1] and lamels:
+            self._continue_drawing_disks_sizes(geo, radius, lamels)
+        else:
+            # Для Бабочки (2) полностью отключаем старую гребенку!
+            # Кадрируем камеру исключительно по красивым CAD-границам sceneRect, которые мы настроили
+            self.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
         # =========================================================================
         # 🪵 ШАГ 1: ОТРИСОВКА ВЕРТИКАЛЬНЫХ ДОСОК-ЛАМЕЛЕЙ ПО 135 ММ

@@ -147,11 +147,28 @@ class MainWindow(QMainWindow):
         
         self.main_stacked_widget.addWidget(disks_workspace) # Индекс 1
         
-        # === МОДУЛЬ 3: РЕДАКТОР (ЗАГЛУШКА) ===
-        self.editor_stub = QWidget()
-        editor_lay = QHBoxLayout(self.editor_stub)
-        editor_lay.addWidget(QLabel("[ Редактор контуров бани ]"))
-        self.main_stacked_widget.addWidget(self.editor_stub) # Индекс 2
+        # === МОДУЛЬ 3: ГРАФИЧЕСКИЙ РЕДАКТОР ===
+        # Импортируем наш новый собранный контроллер
+        from modules.cad_editor.controller import CadEditorController
+        
+        # Создаем контроллер, который сам соберет тулбар, холст и статусбар
+        self.cad_editor_controller = CadEditorController()
+        toolbar_widget, canvas_widget, statusbar_widget = self.cad_editor_controller.get_widgets()
+        
+        # Создаем контейнер-виджет для вкладки редактора
+        editor_workspace = QWidget()
+        # Компоновка строго вертикальная: тулбар сверху, холст по центру, статусбар снизу
+        editor_workspace_layout = QVBoxLayout(editor_workspace)
+        editor_workspace_layout.setContentsMargins(0, 0, 0, 0)
+        editor_workspace_layout.setSpacing(0)
+        
+        # Монтируем послойно
+        editor_workspace_layout.addWidget(toolbar_widget)
+        editor_workspace_layout.addWidget(canvas_widget, stretch=1)
+        editor_workspace_layout.addWidget(statusbar_widget)
+        
+        # Добавляем готовый редактор в стек под индексом 2
+        self.main_stacked_widget.addWidget(editor_workspace)  # Индекс 2
         
         # === МОДУЛЬ 4: ПРОСМОТР G-КОДА ===
         self.gcode_controller = GCodeController()

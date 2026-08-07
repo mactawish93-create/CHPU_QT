@@ -102,20 +102,6 @@ class DisksCanvas(QGraphicsView):
             center_text.setPos(cx, cy)
 
         # =========================================================================
-        # 🚪 ШАГ 3: ВИЗУАЛИЗАЦИЯ ДВЕРНОГО ПРОЕМА И ЧЕТВЕРТИ (Только Круг и Квадро)
-        # =========================================================================
-        if main_mode_idx in [0, 1] and geo.get("has_door"):
-            outer_pts = geo.get("door_outer", [])
-            inner_pts = geo.get("door_inner", [])
-            outer_pen = QPen(QColor("#FF4500"), 1.5, Qt.PenStyle.DashLine)
-            outer_poly = QPolygonF([QPointF(x, y) for x, y in outer_pts])
-            self.scene.addPolygon(outer_poly, outer_pen, QBrush(Qt.BrushStyle.NoBrush))
-            
-            inner_pen = QPen(QColor("#00FFFF"), 1.0, Qt.PenStyle.DotLine)
-            inner_poly = QPolygonF([QPointF(x, y) for x, y in inner_pts])
-            self.scene.addPolygon(inner_poly, inner_pen, QBrush(Qt.BrushStyle.NoBrush))
-
-        # =========================================================================
         # 📐 ШАГ 4: ФОКУСИРОВКА И РАЗМЕРНЫЕ СЕТКИ
         # =========================================================================
         # 🔥 ИСПРАВЛЕНО: строим шахматную сетку ТОЛЬКО для Круга (0) и Квадро (1)
@@ -125,48 +111,6 @@ class DisksCanvas(QGraphicsView):
             # Для Бабочки (2) полностью отключаем старую гребенку!
             # Кадрируем камеру исключительно по красивым CAD-границам sceneRect, которые мы настроили
             self.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
-
-        # =========================================================================
-        # 🪵 ШАГ 1: ОТРИСОВКА ВЕРТИКАЛЬНЫХ ДОСОК-ЛАМЕЛЕЙ ПО 135 ММ
-        # =========================================================================
-        if lamels:
-            wood_brush = QBrush(QColor("#25252B"))  # Матовая темная текстура доски
-            wood_pen = QPen(QColor("#353540"), 1)   # Тонкий шов стыка ламелей
-            
-            for lamel in lamels:
-                x1 = lamel["x_start"]
-                x2 = lamel["x_end"]
-                length = lamel["length"]
-                
-                half_len = length / 2.0
-                rect = QRectF(x1, -half_len, x2 - x1, length)
-                self.scene.addRect(rect, wood_pen, wood_brush)
-
-        # =========================================================================
-        # 🎯 ШАГ 2: ДЕЛИГИРОВАНИЕ ОТРИСОВКИ КОНТУРА В СУБМОДУЛЬ ФОРМЫ (SHAPES)
-        # =========================================================================
-        contour_pen = QPen(QColor("#FF9F43"), 2, Qt.PenStyle.SolidLine) # Янтарный контур заготовки
-        shape_instance.draw_contour(self.scene, contour_pen) # Объект сам рисует свой круг или Квадро-бочку!
-
-        # =========================================================================
-        # 👁️ ШАГ 2.5: ОТОБРАЖЕНИЕ ТЕКУЩЕГО ДИАМЕТРА ПО ЦЕНТРУ ЧЕРТЕЖА
-        # =========================================================================
-        if lamels: # Выводим Ø только если есть чертеж ламелей (не на заглушках)
-            center_label = f"Ø {diameter:.0f} мм" if main_mode_idx == 0 else f"КВАДРО {diameter:.0f} мм"
-            center_text = QGraphicsTextItem(center_label)
-            font_center = QFont("Segoe UI", 32)
-            font_center.setBold(True)
-            center_text.setFont(font_center)
-            center_text.setDefaultTextColor(QColor(255, 159, 67, 45)) # Полупрозрачный брендовый янтарный
-            
-            t_center = QTransform()
-            t_center.scale(1, -1)
-            center_text.setTransform(t_center)
-            self.scene.addItem(center_text)
-            
-            cx = -center_text.boundingRect().width() / 2.0
-            cy = center_text.boundingRect().height() / 2.0
-            center_text.setPos(cx, cy)
 
         # =========================================================================
         # 🚪 ШАГ 3: ВИЗУАЛИЗАЦИЯ ДВЕРНОГО ПРОЕМА И ЧЕТВЕРТИ (ИЗ ПРОЦЕССОРА ДВЕРЕЙ)
@@ -272,6 +216,7 @@ class DisksCanvas(QGraphicsView):
         # Автофокус камеры под габариты заготовки
         self.scene.setSceneRect(-radius - 150, -radius - 200, radius * 2.0 + 300, radius * 2.0 + 400)
         self.fitInView(self.scene.itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
+
 
     # --- CAD-НАВИГАЦИЯ МЫШИ (Панорамирование ПРАВОЙ кнопкой или зажатием колесика СКМ) ---
     def mousePressEvent(self, event: QMouseEvent):

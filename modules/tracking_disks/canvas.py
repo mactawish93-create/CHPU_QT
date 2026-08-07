@@ -127,13 +127,14 @@ class DisksCanvas(QGraphicsView):
             inner_poly = QPolygonF([QPointF(x, y) for x, y in inner_pts])
             self.scene.addPolygon(inner_poly, inner_pen, QBrush(Qt.BrushStyle.NoBrush))
 
-        # Построение размерной шахматной сетки ламелей
-        if lamels:
+     # Построение размерной шахматной сетки ламелей (Только для Круга и Квадро!)
+        if main_mode_idx != 2 and lamels:
             self._continue_drawing_disks_sizes(geo, radius, lamels)
         else:
-            # Если это пустая заглушка — ставим дефолтный фокус камеры
-            self.scene.setSceneRect(-200, -200, 400, 400)
-            self.fitInView(self.scene.itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
+         # Для Бабочки (2) полностью отключаем старую гребенку и
+         # кадрируем камеру по ее родным CAD-границам sceneRect из babochka.py
+            self.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+
     def _continue_drawing_disks_sizes(self, geo: dict, radius: float, lamels: list):
         """Построение внешней шахматной гребенки и внутренних мятных размеров обрезков"""
         dim_pen = QPen(QColor("#FF9F43"), 1)

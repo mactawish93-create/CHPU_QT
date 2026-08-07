@@ -37,34 +37,67 @@ class DisksController:
         # 🔥 ВНЕДРЕНО: Привязываем синюю кнопку экспорта к методу генерации УП
         self.sidebar.btn_generate_gcode.clicked.connect(self._export_disks_gcode_to_file)
 
+        # Слушаем форму Бабочки
+       # self.sidebar.babochka_view.combo_sub_mode.currentIndexChanged.connect(self.collect_and_update)
+        self.sidebar.babochka_view.spin_diameter.valueChanged.connect(self.collect_and_update)
+        self.sidebar.babochka_view.spin_depth_z.valueChanged.connect(self.collect_and_update)
+        self.sidebar.babochka_view.spin_h_kon.valueChanged.connect(self.collect_and_update)
+        self.sidebar.babochka_view.combo_vert_paz.currentIndexChanged.connect(self.collect_and_update)
+        self.sidebar.babochka_view.spin_room_y.valueChanged.connect(self.collect_and_update)
+        self.sidebar.babochka_view.spin_paz_z.valueChanged.connect(self.collect_and_update)
+
     def _get_current_active_payload(self):
         """Внутренний хелпер: парсит и собирает текущие параметры заготовки"""
         current_main_idx = self.sidebar.combo_main_mode.currentIndex()
-        view = self.sidebar.round_view if current_main_idx == 0 else self.sidebar.quadro_view
         
-        dia_text = view.combo_diameter.currentText()
-        diameter_val = float(dia_text.split()[0]) # Извлекаем число из '2000 мм'
-        
-        offset_text = view.combo_door_offset.currentText()
-        offset_val = float(offset_text.split()[0]) # Извлекаем число из '100 мм'
-        
-        return {
+        if current_main_idx == 0:
+            view = self.sidebar.round_view
+        elif current_main_idx == 1:
+            view = self.sidebar.quadro_view
+        elif current_main_idx == 2:
+            view = self.sidebar.babochka_view
+        else:
+            view = self.sidebar.round_view
+
+        # 🔥 ВНЕДРЕНО: Для Бабочки (2) берем диаметр напрямую из спинбокса, для Круга/Квадро - из текста комбобокса
+        if current_main_idx == 2:
+            diameter_val = view.spin_diameter.value()
+            sub_mode_text = "Глухой диск" # Всегда глухой, проема нет
+            offset_val = 0.0
+        else:
+            dia_text = view.combo_diameter.currentText()
+            diameter_val = float(dia_text.split()[0])
+            sub_mode_text = view.combo_sub_mode.currentText()
+            offset_text = view.combo_door_offset.currentText()
+            offset_val = float(offset_text.split()[0])
+
+        payload = {
             "main_mode_idx": current_main_idx,
-            "sub_mode": view.combo_sub_mode.currentText(),
+            "sub_mode": sub_mode_text,
             "diameter": diameter_val,
             "door_offset": offset_val,
             "depth_z": view.spin_depth_z.value()
         }
 
+        if current_main_idx == 2:
+            payload["h_kon"] = view.spin_h_kon.value()
+            payload["cut_vert_paz"] = (view.combo_vert_paz.currentIndex() == 1)
+            payload["room_y"] = view.spin_room_y.value()
+            payload["paz_z"] = view.spin_paz_z.value()
+
+        return payload
+
     def collect_and_update(self):
         """Сбор данных сайдбара дисков и живое обновление чертежа"""
         current_main_idx = self.sidebar.combo_main_mode.currentIndex()
         
-        # Если выбраны заглушки (Бабочка, Викинг и т.д.) — выходим
-        if current_main_idx > 1:
+        # Разрешаем проход для Круга (0), Квадро (1) и Бабочки (2)
+        if current_main_idx > 2:
             return
-            
+
         payload = self._get_current_active_payload()
+        
+        # Передаем параметры в модель для геометрического расчета и отрисовки
         geo_packet = self.model.calculate_disks_geometry(payload)
         self.canvas.draw_disks_layout(geo_packet)
 

@@ -4,6 +4,7 @@ from modules.tracking_disks.shapes.babochka import BabochkaDiskShape
 from modules.tracking_disks.shapes.viking import VikingDiskShape
 from modules.tracking_disks.shapes.quadrohouse import QuadroHouseDiskShape
 from modules.tracking_disks.door_data import DoorDataProcessor
+from .shapes.babochka import BabochkaDiskShape
 
 class DisksModel:
     """
@@ -29,13 +30,24 @@ class DisksModel:
         
         radius = diameter / 2.0
         has_door = (sub_mode == "Диск с проемом")
-
         # =========================================================================
         # 🪵 ШАГ 1: ДИНАМИЧЕСКИЙ ВЫЗОВ АКТИВНОЙ ГЕОМЕТРИИ ФОРМЫ (SHAPES)
         # =========================================================================
         shape_class = self.shapes_map.get(main_mode_idx, RoundDiskShape)
-        shape_instance = shape_class(diameter)
         
+        # 🔥 ВНЕДРЕНО: Если выбрана Бабочка, распаковываем все ее новые параметры
+        if main_mode_idx == 2:
+            shape_instance = shape_class(
+                diameter=diameter,
+                h_kon=params.get("h_kon", 2200.0),
+                cut_vert_paz=params.get("cut_vert_paz", True),
+                room_y=params.get("room_y", 1150.0),
+                paz_z=params.get("paz_z", -20.0)
+            )
+        else:
+            # Для Круга и Квадро оставляем стандартную инициализацию
+            shape_instance = shape_class(diameter)
+            
         # Запрашиваем у изолированного подмодуля чистый массив ламелей без дверей
         raw_lamels = shape_instance.calculate_lamels()
 
